@@ -1,6 +1,3 @@
-import St from 'gi://St'
-import GObject from 'gi://GObject'
-import AccountsService from 'gi://AccountsService'
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js'
 import {LoginDialog} from 'resource:///org/gnome/shell/gdm/loginDialog.js'
 import * as Main from 'resource:///org/gnome/shell/ui/main.js'
