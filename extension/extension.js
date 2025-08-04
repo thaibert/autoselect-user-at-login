@@ -20,8 +20,8 @@ export default class AutoselectUserExtension extends Extension {
     this.injection_manager.overrideMethod(
       LoginDialog.prototype,
       "_loadUserList",
-      _loadUserList => function() {
-        const result = _loadUserList.call(this)
+      _loadUserList => function(...args) {
+        const result = _loadUserList.call(this, ...args)
         try {
           if (tries_left <= 0) return;
 
@@ -29,8 +29,8 @@ export default class AutoselectUserExtension extends Extension {
           if (userlistitems.length != 1) return;
           // TODO: allow specifying an index or a username to autoselect? (Instead of only applying to n=1)
           userlistitems[0].emit("activate")
-          tries_left -= 1 // TODO: Disable when LoginDialog/AuthPrompt/... emits a 'reset' instead of this
         } finally {
+          tries_left -= 1 // TODO: Disable when LoginDialog/AuthPrompt/... emits a 'reset' instead of this
           return result
         }
       }
