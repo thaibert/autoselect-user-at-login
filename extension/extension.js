@@ -8,6 +8,7 @@ let tries_left = -1
 
 export default class AutoselectUserExtension extends Extension {
   injection_manager = null
+  dummy_boxlayout = null
 
   constructor(metadata) {
     super(metadata)
@@ -36,29 +37,35 @@ export default class AutoselectUserExtension extends Extension {
       }
     )
 
+    this.dummy_boxlayout = new St.BoxLayout()
     this.injection_manager.overrideMethod(
       LoginDialog.prototype,
       "_onUserListActivated",
-      _onUserListActivated => function(...args) {
-        // The existing LoginDialog#_onUserListActivated has no way of disabling
-        // the animation caused by GdmUtil.cloneAndFadeOutActor. Hence, to disable
-        // the ease() call on the cloned actor, we pass a dummy `_userSelectionBox`
-        // object and manually hide the user list.
-        this._userSelectionBox.hide()
-        const _userSelectionBox = this._userSelectionBox
-        this._userSelectionBox = new St.BoxLayout()  // TODO: allocate once at enable-time, and then also destroy in disable()
-        try {
-          _onUserListActivated.call(this, ...args)
-        } finally {
-          this._userSelectionBox = _userSelectionBox
+      _onUserListActivated => {
+        const dummy_boxlayout = this.dummy_boxlayout
+        return function(...args) {
+          // The existing LoginDialog#_onUserListActivated has no way of disabling
+          // the animation caused by GdmUtil.cloneAndFadeOutActor. Hence, to disable
+          // the ease() call on the cloned actor, we pass a dummy `_userSelectionBox`
+          // object and manually hide the user list.
+          this._userSelectionBox.hide()
+          const _userSelectionBox = this._userSelectionBox
+          this._userSelectionBox = dummy_boxlayout
+          try {
+            _onUserListActivated.call(this, ...args)
+          } finally {
+            this._userSelectionBox = _userSelectionBox
+          }
         }
       }
     )
   }
 
   disable() {
-    this.injection_manager.clear()
+    this.injection_manager?.clear()
     this.injection_manager = null
+    this.dummy_boxlayout?.destroy()
+    this.dummy_boxlayout = null
   }
 }
 
