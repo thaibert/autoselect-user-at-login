@@ -1,22 +1,55 @@
-
 import {Extension, InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js'
 import {LoginDialog} from 'resource:///org/gnome/shell/gdm/loginDialog.js'
 import * as Main from 'resource:///org/gnome/shell/ui/main.js'
 import St from 'gi://St'
-
-let tries_left = -1
+import GObject from 'gi://GObject'
 
 export default class AutoselectUserExtension extends Extension {
   injection_manager = null
   dummy_boxlayout = null
+  lifetime_startup_complete = null
+  lifetime_cancelled = null
 
   constructor(metadata) {
     super(metadata)
   }
 
   enable() {
-    tries_left = 1
-    this.injection_manager = new InjectionManager();
+    this.injection_manager = new InjectionManager()
+    this.dummy_boxlayout = new St.BoxLayout()
+    this.lifetime_startup_complete = new St.Label()
+    this.lifetime_cancelled = new St.Label()
+
+    Main.layoutManager.connectObject(
+      "startup-complete",
+      () => {
+        const loginDialog = Main.screenShield._dialog
+        const expected_type = LoginDialog
+        if (! loginDialog instanceof expected_type) {
+          console.trace(`ERROR: expected screenShield._dialog to be a ${expected_type.prototype.constructor.name} after "startup-complete", but got object with constructor '${loginDialog?.constructor?.name}'`)
+          return
+        }
+
+        loginDialog._authPrompt.connectObject(
+          "cancelled",
+          () => {
+            this.lifetime_cancelled?.destroy()
+            this.lifetime_cancelled = null
+            this.disable()
+          },
+          this.lifetime_cancelled
+        )
+
+        this.lifetime_startup_complete?.destroy
+        this.lifetime_startup_complete = null
+      },
+      // NB: https://gjs-docs.gnome.org/gjs/overrides.md#gobject-object-connect_object  lies!
+      //     The gobject must come last, not second-to-last (see impl):
+      //     * https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/2d5d3056e9dad839b137477c937d0dc05f3b3d16/js/ui/environment.js#L261
+      //     * https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/2d5d3056e9dad839b137477c937d0dc05f3b3d16/js/misc/signalTracker.js#L209
+      GObject.ConnectFlags.AFTER,
+      this.lifetime_startup_complete
+    )
 
     this.injection_manager.overrideMethod(
       LoginDialog.prototype,
@@ -24,20 +57,16 @@ export default class AutoselectUserExtension extends Extension {
       _loadUserList => function(...args) {
         const result = _loadUserList.call(this, ...args)
         try {
-          if (tries_left <= 0) return;
-
-          const userlistitems = accumulate_userlistitems(Main.uiGroup)
+          const userlistitems = accumulate_userlistitems(Main.screenShield._lockDialogGroup)
           if (userlistitems.length != 1) return;
           // TODO: allow specifying an index or a username to autoselect? (Instead of only applying to n=1)
           userlistitems[0].emit("activate")
         } finally {
-          tries_left -= 1 // TODO: Disable when LoginDialog/AuthPrompt/... emits a 'reset' instead of this
           return result
         }
       }
     )
 
-    this.dummy_boxlayout = new St.BoxLayout()
     this.injection_manager.overrideMethod(
       LoginDialog.prototype,
       "_onUserListActivated",
@@ -66,6 +95,10 @@ export default class AutoselectUserExtension extends Extension {
     this.injection_manager = null
     this.dummy_boxlayout?.destroy()
     this.dummy_boxlayout = null
+    this.lifetime_cancelled?.destroy()
+    this.lifetime_cancelled = null
+    this.lifetime_startup_complete?.destroy()
+    this.lifetime_startup_complete = null
   }
 }
 
