@@ -1,5 +1,5 @@
 {
-    "version": 1,
+    "version": 2,
     "uuid": "autoselect-user-at-login@thaibert.com",
     "name": "Auto-select User at Login",
     "description": "If there is only a single user, auto-select it from the list during login and save a click.",
