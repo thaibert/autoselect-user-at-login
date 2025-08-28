@@ -1,0 +1,16 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: ubuntu
+    password: "$6$exDY1mhS4KUYCE/2$zmn9ToZwTKLhCw.b4/b.ZRTIZM30JZ4QrOQ2aOXJ8yk96xpcCof0kxKwuX1kqLG/ygbJ1f8wxED22bTL4F46P0" # "ubuntu"
+    username: ubuntu
+  late-commands:
+    - "shutdown -h now"
+  keyboard:
+    layout: dk
+  storage:
+    layout:
+      name: direct
+      match:
+        model: QEMU_HARDDISK

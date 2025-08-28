@@ -3,7 +3,7 @@
     "uuid": "autoselect-user-at-login@thaibert.com",
     "name": "Auto-select User at Login",
     "description": "If there is only a single user, auto-select it from the list during login and save a click.",
-    "shell-version": [ "48" ],
+    "shell-version": [ "46", "48" ],
     "url": "https://github.com/thaibert/autoselect-user-at-login",
     "session-modes": ["gdm"]
 }
