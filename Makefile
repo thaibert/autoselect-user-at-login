@@ -12,6 +12,12 @@ dist:
 clean:
 	rm -rf dist/
 
+.PHONY: install
+install: dist/${uuid} | dist
+	sudo mkdir -pv /usr/share/gnome-shell/extensions
+	sudo cp -rvf dist/${uuid} /usr/share/gnome-shell/extensions
+	sudo machinectl shell gdm@ /usr/bin/gnome-extensions enable ${uuid}
+
 
 #### The extension itself ####
 dist/${uuid}.tgz: dist/${uuid} | dist
