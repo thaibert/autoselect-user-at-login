@@ -1,8 +1,9 @@
 uuid := $(shell jq -r ".uuid" extension/metadata.json)
 dist := .dist
+working-dir := .working-dir
 
-.PHONY: all
-all: ${dist}/${uuid}.tgz ${dist}/${uuid}.ubuntu-24.04.3.iso
+.PHONY: extension
+extension: ${dist}/${uuid}.tgz
 
 #### Utilities ####
 ${dist}:
@@ -13,13 +14,21 @@ ${dist}:
 clean:
 	rm -rf ${dist}/
 
+${working-dir}:
+	mkdir -p ${working-dir}/
+	echo "*" > ${working-dir}/.gitignore
+
+.PHONY: clean-disks
+clean-disks:
+	rm -rf ${working-dir}/
+
+#### The extension itself ####
 .PHONY: install
 install: ${dist}/${uuid} | ${dist}
 	sudo mkdir -pv /usr/share/gnome-shell/extensions
 	sudo cp -rvf ${dist}/${uuid} /usr/share/gnome-shell/extensions
 	sudo machinectl shell gdm@ /usr/bin/gnome-extensions enable ${uuid}
 
-#### The extension itself ####
 ${dist}/${uuid}.tgz: ${dist}/${uuid} | ${dist}
 	tar czvf $@ -C ${dist}/ ${uuid}
 
@@ -29,50 +38,56 @@ ${dist}/${uuid}: $(wildcard extension/*) | ${dist}
 	cp $(wildcard extension/*) $@
 
 #### Testing with ubuntu-24.04.3 ####
-.PHONY: ubuntu-24.04.3-install
-ubuntu-24.04.3-install: ${dist}/ubuntu-24.04.3-autoinstall.iso verification/ubuntu-24.04.3/disk.qcow2 verification/ubuntu-24.04.3/ubuntu-24.04.3-desktop-amd64.iso:
+ubuntus :=
+ubuntus += ubuntu-24.04.3-desktop-amd64
+
+ubuntu-install = $(addsuffix -install,$(ubuntus))
+.PHONY: $(ubuntu-install)
+$(ubuntu-install): %-install: ${dist}/autoinstall-%.iso ${working-dir}/%.qcow2 verification/%.iso
 	qemu-system-x86_64 \
 			-enable-kvm \
 			-cpu host \
 			-m 4096 \
 			-vga virtio \
 			-boot d \
-			-drive media=disk,format=qcow2,file=verification/ubuntu-24.04.3/disk.qcow2 \
-			-drive media=cdrom,file=verification/ubuntu-24.04.3/ubuntu-24.04.3-desktop-amd64.iso \
-			-drive if=virtio,media=disk,format=raw,file=${dist}/ubuntu-24.04.3-autoinstall.iso
+			-drive media=disk,format=qcow2,file=${working-dir}/$*.qcow2 \
+			-drive media=cdrom,file=verification/$*.iso \
+			-drive if=virtio,media=disk,format=raw,file=${dist}/autoinstall-$*.iso
 
-.PHONY: ubuntu-24.04.3-run
-ubuntu-24.04.3-run: verification/ubuntu-24.04.3/disk.qcow2 ${dist}/${uuid}.ubuntu-24.04.3.iso
+ubuntu-run = $(addsuffix -run,$(ubuntus))
+.PHONY: $(ubuntu-run)
+$(ubuntu-run): %-run: ${working-dir}/%.qcow2 ${dist}/payload-%.iso
 	qemu-system-x86_64 \
 			-enable-kvm \
 			-cpu host \
 			-m 4096 \
 			-vga virtio \
 			-display gtk,show-menubar=off \
-			-drive file=verification/ubuntu-24.04.3/disk.qcow2,format=qcow2,media=disk \
-			-drive file=${dist}/${uuid}.ubuntu-24.04.3.iso,format=raw,media=cdrom
+			-drive file=${working-dir}/$*.qcow2,format=qcow2,media=disk \
+			-drive file=${dist}/payload-$*.iso,format=raw,media=cdrom
 
-.PHONY: ubuntu-24.04.3-clean
-ubuntu-24.04.3-clean: clean
-ifneq ("$(wildcard verification/ubuntu-24.04.3/*.qcow2)","")
-	rm -f $(wildcard verification/ubuntu-24.04.3/*.qcow2)
-endif
+ubuntu-clean = $(addsuffix -clean,$(ubuntus))
+.PHONY: $(ubuntu-clean)
+$(ubuntu-clean): %-clean:
+	rm -fv ${working-dir}/$*.qcow2
 
-verification/ubuntu-24.04.3/disk.qcow2:
-	printf ".gitignore\n*.qcow2" > verification/ubuntu-24.04.3/.gitignore
+ubuntu-disks = $(patsubst %, ${working-dir}/%.qcow2, $(ubuntus))
+$(ubuntu-disks): | ${working-dir}
 	qemu-img create -f qcow2 $@ 15G
 
-${dist}/ubuntu-24.04.3-autoinstall.iso: $(wildcard verification/ubuntu-24.04.3/cidata/*) | ${dist}
-	genisoimage -output $@ -volid CIDATA -rational-rock -joliet verification/ubuntu-24.04.3/cidata
+ubuntu-autoinstall = $(patsubst %, ${dist}/autoinstall-%.iso, $(ubuntus))
+$(ubuntu-autoinstall): ${dist}/autoinstall-%.iso: $(wildcard verification/%/cidata/*) | ${dist}
+	genisoimage -output $@ -volid CIDATA -rational-rock -joliet verification/$*/cidata
 
-${dist}/${uuid}.ubuntu-24.04.3.iso: ${dist}/iso-dist/ubuntu-24.04.3 | ${dist}
-	genisoimage -output $@ -volid gnome-extension -rational-rock -joliet ${dist}/iso-dist/ubuntu-24.04.3
+ubuntu-payload-iso = $(patsubst %, ${dist}/payload-%.iso, $(ubuntus))
+$(ubuntu-payload-iso): ${dist}/payload-%.iso: ${dist}/payload/% | ${dist}
+	genisoimage -output $@ -volid gnome-extension -rational-rock -joliet ${dist}/payload/$*
 
-${dist}/iso-dist/ubuntu-24.04.3: ${dist}/${uuid} verification/ubuntu-24.04.3/install.sh | ${dist}
+ubuntu-payload = $(patsubst %, ${dist}/payload/%, $(ubuntus))
+$(ubuntu-payload): ${dist}/payload/%: ${dist}/${uuid} verification/%/install.sh | ${dist}
 	mkdir -p $@
 	touch $@
-	cp -r ${dist}/${uuid} $@
-	cp verification/ubuntu-24.04.3/install.sh $@
-
+	cp -rv ${dist}/${uuid} $@
+	cp -v verification/$*/install.sh $@
 
 ####  ####
