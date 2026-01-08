@@ -46,7 +46,7 @@ ubuntus += ubuntu-25.04-desktop-amd64
 
 ubuntu-install = $(addsuffix -install,$(ubuntus))
 .PHONY: $(ubuntu-install)
-$(ubuntu-install): %-install: ${dist}/autoinstall-%.iso ${working-dir}/%.qcow2 verification/%.iso
+$(ubuntu-install): %-install: ${dist}/autoinstall-%.iso ${working-dir}/%.qcow2 verification/%.iso | ${dist}
 	qemu-system-x86_64 \
 			-enable-kvm \
 			-cpu host \
@@ -59,7 +59,7 @@ $(ubuntu-install): %-install: ${dist}/autoinstall-%.iso ${working-dir}/%.qcow2 v
 
 ubuntu-run = $(addsuffix -run,$(ubuntus))
 .PHONY: $(ubuntu-run)
-$(ubuntu-run): %-run: ${working-dir}/%.qcow2 ${dist}/payload-%.iso
+$(ubuntu-run): %-run: ${working-dir}/%.qcow2 ${dist}/payload-%.iso | ${dist}
 	qemu-system-x86_64 \
 			-enable-kvm \
 			-cpu host \
@@ -79,7 +79,8 @@ $(ubuntu-disks): | ${working-dir}
 	qemu-img create -f qcow2 $@ 15G
 
 ubuntu-autoinstall = $(patsubst %, ${dist}/autoinstall-%.iso, $(ubuntus))
-$(ubuntu-autoinstall): ${dist}/autoinstall-%.iso: $(wildcard verification/%/cidata/*) | ${dist}
+.SECONDEXPANSION:
+$(ubuntu-autoinstall): ${dist}/autoinstall-%.iso: $$(wildcard verification/%/cidata/*) | ${dist}
 	genisoimage -output $@ -volid CIDATA -rational-rock -joliet verification/$*/cidata
 
 ubuntu-payload-iso = $(patsubst %, ${dist}/payload-%.iso, $(ubuntus))
