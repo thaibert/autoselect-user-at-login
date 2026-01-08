@@ -49,7 +49,8 @@ ubuntu-install = $(addsuffix -install,$(ubuntus))
 $(ubuntu-install): %-install: ${dist}/autoinstall-%.iso ${working-dir}/%.qcow2 verification/%.iso | ${dist}
 	qemu-system-x86_64 \
 			-enable-kvm \
-			-cpu host \
+			-cpu host,kvm=on,topoext=on \
+			-smp sockets=1,cores=3,threads=2 \
 			-m 4096 \
 			-vga virtio \
 			-boot d \
@@ -62,7 +63,8 @@ ubuntu-run = $(addsuffix -run,$(ubuntus))
 $(ubuntu-run): %-run: ${working-dir}/%.qcow2 ${dist}/payload-%.iso | ${dist}
 	qemu-system-x86_64 \
 			-enable-kvm \
-			-cpu host \
+			-cpu host,kvm=on,topoext=on \
+			-smp sockets=1,cores=3,threads=2 \
 			-m 4096 \
 			-vga virtio \
 			-display gtk,show-menubar=off \
