@@ -42,6 +42,7 @@ ${dist}/${uuid}: $(wildcard extension/*) | ${dist}
 #### Testing with ubuntu-24.04.3 ####
 ubuntus :=
 ubuntus += ubuntu-24.04.3-desktop-amd64
+ubuntus += ubuntu-25.04-desktop-amd64
 
 ubuntu-install = $(addsuffix -install,$(ubuntus))
 .PHONY: $(ubuntu-install)
