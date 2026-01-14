@@ -28,6 +28,8 @@ This extension uses the `"gdm"` session mode to be allowed to run on the login d
    sudo machinectl shell gdm@ /usr/bin/gnome-extensions enable autoselect-user-at-login@thaibert.com
    ```
 
+Alternatively, clone the repo and run `make install`.
+
 ### Compatibility
 The list of supported GNOME Shell versions can be found in the `"shell-version"` field in [extension/metadata.json](extension/metadata.json).
 
