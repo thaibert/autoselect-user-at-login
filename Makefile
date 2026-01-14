@@ -34,10 +34,11 @@ install: ${dist}/${uuid} | ${dist}
 ${dist}/${uuid}.tgz: ${dist}/${uuid} | ${dist}
 	tar czvf $@ -C ${dist}/ ${uuid}
 
-${dist}/${uuid}: $(wildcard extension/*) | ${dist}
+${dist}/${uuid}: $(wildcard extension/*) LICENSE | ${dist}
 	mkdir -p $@
 	touch $@
 	cp $(wildcard extension/*) $@
+	cp LICENSE $@
 
 #### Testing with ubuntu-24.04.3 ####
 ubuntus :=
