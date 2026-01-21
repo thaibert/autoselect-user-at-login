@@ -27,9 +27,13 @@ clean-disks:
 #### The extension itself ####
 .PHONY: install
 install: ${dist}/${uuid} | ${dist}
-	sudo mkdir -pv /usr/share/gnome-shell/extensions
-	sudo cp -rvf ${dist}/${uuid} /usr/share/gnome-shell/extensions
-	sudo machinectl shell gdm@ /usr/bin/gnome-extensions enable ${uuid}
+ifneq ($(shell id -u), 0)
+	$(error "The '$@' target must be run as root.")
+endif
+	$(shell false)
+	mkdir -pv /usr/share/gnome-shell/extensions
+	cp -rvf ${dist}/${uuid} /usr/share/gnome-shell/extensions
+	machinectl shell gdm@ /usr/bin/gnome-extensions enable ${uuid}
 
 ${dist}/${uuid}.tgz: ${dist}/${uuid} | ${dist}
 	tar czvf $@ -C ${dist}/ ${uuid}
